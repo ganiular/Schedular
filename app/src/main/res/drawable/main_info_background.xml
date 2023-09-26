@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- rounded_container.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:startColor="#F7D41E"
+        android:endColor="#36BD70"
+        android:angle="315"
+        />
+    <corners android:radius="16dp" />
+</shape>
