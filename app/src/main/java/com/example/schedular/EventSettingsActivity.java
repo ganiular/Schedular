@@ -1,10 +1,12 @@
 package com.example.schedular;
 
+import android.app.AlarmManager;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
 import android.app.TimePickerDialog;
-import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -18,20 +20,37 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.schedular.dialog.InputNumberDialog;
 import com.example.schedular.dialog.InputRangeDialog;
+import com.example.schedular.dialog.Result;
+import com.example.schedular.provider.EventProvider;
 import com.example.schedular.utils.Converter;
 import com.google.android.material.chip.Chip;
 
 import java.util.Calendar;
 
-public class AddEventActivity extends AppCompatActivity{
-    ContentValues settingsValue = new ContentValues();
-    String[] selectedDays = new String[7];
+public class EventSettingsActivity extends AppCompatActivity{
+    EventProvider.EventModel settingsValue;
+    EventProvider provider;
+    String[] daysOfWeek = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+    private long eventId;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_add_event);
+        setContentView(R.layout.activity_event_settings);
+
+        provider = new EventProvider(this);
+        Intent intent = getIntent();
+        eventId = intent.getLongExtra(MainActivity.EVENT_ID, 0);
+        if (eventId != 0) {
+            settingsValue = provider.getEvent(eventId);
+            initializeViewsData(settingsValue);
+        } else {
+            settingsValue = new EventProvider.EventModel();
+            initializeViewsData(settingsValue);
+        }
+
+        findViewById(R.id.backBtn).setOnClickListener(view -> onBackPressed());
         findViewById(R.id.timeBox).setOnClickListener(this::openTimeDialog);
         findViewById(R.id.durationBox).setOnClickListener(this::openDurationDialog);
         findViewById(R.id.eventNameTxt).setOnClickListener(this::openEventNameDialog);
@@ -42,56 +61,123 @@ public class AddEventActivity extends AppCompatActivity{
         findViewById(R.id.ringingVolumeLyt).setOnClickListener(this::openRingVolumeDialog);
         ((CheckBox) findViewById(R.id.repeatChb)).setOnCheckedChangeListener(this::switchRepeat);
 
-
-        // set default time and day
-        setNow();
-
         findViewById(R.id.submitBtn).setOnClickListener(view -> {
             try {
-                createNewEvent(view);
-            } catch (Exception e) {
+                submitEvent();
+            } catch (IllegalArgumentException e) {
                 Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    private void initializeViewsData(EventProvider.EventModel event) {
+        if(eventId == 0){
+            ((TextView) findViewById(R.id.headerTxt)).setText("Create New Event");
+        }else{
+            ((TextView) findViewById(R.id.headerTxt)).setText("Edit Event");
+        }
+        ((TextView) findViewById(R.id.eventNameTxt)).setText(event.title);
+        ((TextView) findViewById(R.id.timeTxt)).setText(Converter.timeFormatToAM_PM(event.hour, event.minute));
+        ((TextView) findViewById(R.id.durationTxt)).setText(Converter.durationToTimeFormat(0, event.duration));
+        ((CheckBox) findViewById(R.id.repeatChb)).setChecked(event.repeat);
+        ((Switch) findViewById(R.id.reminderSwt)).setChecked(event.reminder);
+        switchReminder(null, event.reminder);
+        ((TextView) findViewById(R.id.remindTxt)).setText(Converter.durationToTimeFormat(0, event.remind));
+        ((TextView) findViewById(R.id.snoozeTxt)).setText(Converter.durationToTimeFormat(0, event.snooze));
+        ((TextView) findViewById(R.id.soundTxt)).setText(event.notificationSound);
+        Switch muteSwt = findViewById(R.id.muteSwt);
+        muteSwt.setChecked(event.muteDevice);
+        switchMuteDevice(muteSwt, event.muteDevice);
+        ((TextView) findViewById(R.id.ringingVolumeTxt)).setText(event.ringingVolume + "%");
+        ((Switch) findViewById(R.id.vibrationSwt)).setChecked(event.enableVibration);
+        ((Switch) findViewById(R.id.dataSwt)).setChecked(event.offMobileData);
+        String[] days = event.days;
+        Chip chip = findViewById(R.id.sunday);
+        chip.setChecked(days[0].equals("Sunday"));
+        chip.setSelected(days[0].equals("Sunday"));
+        chip = findViewById(R.id.monday);
+        chip.setChecked(days[1].equals("Monday"));
+        chip.setSelected(days[1].equals("Monday"));
+        chip = findViewById(R.id.tuesday);
+        chip.setChecked(days[2].equals("Tuesday"));
+        chip.setSelected(days[2].equals("Tuesday"));
+        chip = findViewById(R.id.wednesday);
+        chip.setChecked(days[3].equals("Wednesday"));
+        chip.setSelected(days[3].equals("Wednesday"));
+        chip = findViewById(R.id.thursday);
+        chip.setChecked(days[4].equals("Thursday"));
+        chip.setSelected(days[4].equals("Thursday"));
+        chip = findViewById(R.id.friday);
+        chip.setChecked(days[5].equals("Friday"));
+        chip.setSelected(days[5].equals("Friday"));
+        chip = findViewById(R.id.saturday);
+        chip.setChecked(days[6].equals("Saturday"));
+        chip.setSelected(days[6].equals("Saturday"));
+    }
+
     private void switchDataDevice(CompoundButton compoundButton, boolean on) {
-        settingsValue.put("offData", on);
+        settingsValue.offMobileData = on;
     }
 
     private void switchEnableVibration(CompoundButton compoundButton, boolean on) {
-        settingsValue.put("enableVibration", on);
+        settingsValue.enableVibration = on;
     }
 
     private void switchRepeat(CompoundButton compoundButton, boolean on) {
-        settingsValue.put("repeat", on);
+        settingsValue.repeat = on;
     }
 
     private void openRingVolumeDialog(View view) {
-        new InputRangeDialog(this, "Set Volume", new InputNumberDialog.Result() {
+        new InputRangeDialog(this, "Set Volume", new Result() {
             @Override
             protected void onSubmit(int value) {
-                settingsValue.put("ringingVolume", value);
+                settingsValue.ringingVolume = value;
                 TextView txt = view.findViewById(R.id.ringingVolumeTxt);
                 txt.setText(value + "%");
             }
         });
     }
 
-    private void createNewEvent(View view) throws Exception {
-        Log.i("createNewEvent", settingsValue.toString());
+    private void submitEvent() throws IllegalArgumentException {
 
         // Verify if event title and time has been set, if not raise error
-        if(!settingsValue.containsKey("title") || settingsValue.getAsString("title").trim().length() < 1){
-            throw new Exception("Event name not set");
+        if(settingsValue.title == null || settingsValue.title.trim().length() < 1){
+            throw new IllegalArgumentException("Event name not set");
         }
-        if(!(settingsValue.containsKey("hour") || settingsValue.containsKey("minute"))
-            || (settingsValue.getAsInteger("hour") + settingsValue.getAsInteger("minute") < 0)){
-            throw new Exception("Event time not set");
-        }
-        // if(settingsValue.containsKey("reminder") )
 
-        Toast.makeText(this, "coming soon", Toast.LENGTH_SHORT).show();
+        // if no day is selected, auto select today
+        {
+            boolean dayIsSelected = false;
+            for(String day: settingsValue.days){
+                if (day != null){
+                    dayIsSelected = true;
+                    break;
+                }
+            }
+            if(!dayIsSelected){ // no day is selected
+                // get and select today
+                final Calendar calendar = Calendar.getInstance();
+                int todayIndex = calendar.get(Calendar.DAY_OF_WEEK) - 1;
+                settingsValue.days[todayIndex] = daysOfWeek[todayIndex];
+            }
+        }
+
+        if(eventId == 0){
+            eventId = provider.createEvent(settingsValue);
+            Toast.makeText(this, "Event added successful", Toast.LENGTH_SHORT).show();
+        }else{
+            provider.updateEvent(settingsValue, eventId);
+            Toast.makeText(this, "Event updated successful", Toast.LENGTH_SHORT).show();
+        }
+
+        // setAlarm();
+
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra(MainActivity.EVENT_ID, eventId);
+        setResult(RESULT_OK, resultIntent);
+
+        // end this activity and go back
+        finish();
     }
 
     private void switchMuteDevice(CompoundButton compoundButton, boolean on) {
@@ -104,7 +190,7 @@ public class AddEventActivity extends AppCompatActivity{
             child.setEnabled(!on);
         }
 
-        settingsValue.put("muteDevice", on);
+        settingsValue.muteDevice = on;
     }
 
     private void switchReminder(CompoundButton compoundButton, boolean on) {
@@ -122,7 +208,7 @@ public class AddEventActivity extends AppCompatActivity{
             l.setEnabled(on);
         }
 
-        settingsValue.put("reminder", on);
+        settingsValue.reminder = on;
     }
 
     private void openEventNameDialog(View view) {
@@ -137,7 +223,7 @@ public class AddEventActivity extends AppCompatActivity{
         dialogView.findViewById(R.id.okBtn).setOnClickListener(view1 -> {
             String eventName = eventNameEdt.getText().toString();
             ((TextView) view).setText(eventName);
-            settingsValue.put("title", eventName);
+            settingsValue.title = eventName;
             dialog.dismiss();
         });
         dialogView.findViewById(R.id.cancelBtn).setOnClickListener(view1 -> dialog.dismiss());
@@ -159,32 +245,6 @@ public class AddEventActivity extends AppCompatActivity{
         dialogView.findViewById(R.id.cancelBtn).setOnClickListener(view1 -> dialog.dismiss());
     }
 
-    private void setNow() {
-        final Calendar calendar = Calendar.getInstance();
-
-        // get current hour, minute and day
-        int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-        int currentMinute = calendar.get(Calendar.MINUTE);
-        int d = calendar.get(Calendar.DAY_OF_WEEK);
-
-        TextView timeTxt = findViewById(R.id.timeTxt);
-        timeTxt.setText(Converter.timeFormatToAM_PM(currentHour, currentMinute));
-
-        int chipId = 0;
-        switch (d){
-            case 1: chipId = R.id.sunday; break;
-            case 2: chipId = R.id.monday; break;
-            case 3: chipId = R.id.tuesday; break;
-            case 4: chipId = R.id.wednesday; break;
-            case 5: chipId = R.id.thursday; break;
-            case 6: chipId = R.id.friday; break;
-            case 7: chipId = R.id.saturday; break;
-        }
-        Chip chip = findViewById(chipId);
-        chip.setSelected(true);
-        chip.setChecked(true);
-    }
-
     private void setDuration(View view, EditText hourEdt, EditText minuteEdt) {
         int hour = 0, minute = 0;
         try {
@@ -199,7 +259,7 @@ public class AddEventActivity extends AppCompatActivity{
         TextView durationTxt = findViewById(R.id.durationTxt);
         durationTxt.setText(Converter.durationToTimeFormat(hour, minute));
 
-        settingsValue.put("duration", hour * 60 + minute);
+        settingsValue.duration = hour * 60 + minute;
     }
 
     private void openTimeDialog(View view){
@@ -214,8 +274,8 @@ public class AddEventActivity extends AppCompatActivity{
                 (timePicker, hour, minute) -> {
                     TextView timeView = view.findViewById(R.id.timeTxt);
                     timeView.setText(Converter.timeFormatToAM_PM(hour, minute));
-                    settingsValue.put("hour", hour);
-                    settingsValue.put("minute", minute);
+                    settingsValue.hour = hour;
+                    settingsValue.minute = minute;
                 },
                 currentHour,    // initial hour
                 currentMinute,  // initial minute
@@ -227,49 +287,37 @@ public class AddEventActivity extends AppCompatActivity{
 
     public void dayClick(View view){
         Chip chip = (Chip) view;
+        int dayIndex = 0;
+        int id = chip.getId();
+        if (id == R.id.sunday) {
+            dayIndex = 0;
+        } else if (id == R.id.monday) {
+            dayIndex = 1;
+        } else if (id == R.id.tuesday) {
+            dayIndex = 2;
+        } else if (id == R.id.wednesday) {
+            dayIndex = 3;
+        } else if (id == R.id.thursday) {
+            dayIndex = 4;
+        } else if (id == R.id.friday) {
+            dayIndex = 5;
+        } else if (id == R.id.saturday) {
+            dayIndex = 6;
+        }
+
         if (chip.isSelected()){
             chip.setSelected(false);
             chip.setChecked(false);
-            int id = chip.getId();
-            if (id == R.id.sunday) {
-                selectedDays[0] = null;
-            } else if (id == R.id.monday) {
-                selectedDays[1] = null;
-            } else if (id == R.id.tuesday) {
-                selectedDays[2] = null;
-            } else if (id == R.id.wednesday) {
-                selectedDays[3] = null;
-            } else if (id == R.id.thursday) {
-                selectedDays[4] = null;
-            } else if (id == R.id.friday) {
-                selectedDays[5] = null;
-            } else if (id == R.id.saturday) {
-                selectedDays[6] = null;
-            }
+            settingsValue.days[dayIndex] = null;
         }else {
             chip.setSelected(true);
             chip.setChecked(true);
-            int id = chip.getId();
-            if (id == R.id.sunday) {
-                selectedDays[0] = "sunday";
-            } else if (id == R.id.monday) {
-                selectedDays[1] = "monday";
-            } else if (id == R.id.tuesday) {
-                selectedDays[2] = "tuesday";
-            } else if (id == R.id.wednesday) {
-                selectedDays[3] = "wednesday";
-            } else if (id == R.id.thursday) {
-                selectedDays[4] = "thursday";
-            } else if (id == R.id.friday) {
-                selectedDays[5] = "friday";
-            } else if (id == R.id.saturday) {
-                selectedDays[6] = "saturday";
-            }
+            settingsValue.days[dayIndex] = daysOfWeek[dayIndex];
         }
 
         // disable repeat if no day is selected
         boolean repeatable = false;
-        for(String day: selectedDays){
+        for(String day: settingsValue.days){
             if (day != null){
                 repeatable = true;
                 break;
@@ -277,31 +325,28 @@ public class AddEventActivity extends AppCompatActivity{
         }
 
         findViewById(R.id.repeatChb).setEnabled(repeatable);
-
-        String days = Converter.arrayToCommaSeparatedString(selectedDays);
-        settingsValue.put("days", days);
     }
 
     public void openSettingsDialog(View view){
         int viewId = view.getId();
 
         if(viewId == R.id.remindLyt){
-            new InputNumberDialog(this, "Remind Time", "(minutes)", new InputNumberDialog.Result() {
+            new InputNumberDialog(this, "Remind Time", "(minutes)", new Result() {
                 @Override
                 protected void onSubmit(int value) {
                     TextView textView = view.findViewById(R.id.remindTxt);
                     textView.setText(value + " min");
-                    settingsValue.put("remind", value);
+                    settingsValue.remind = value;
                 }
             });
         }
         else if(viewId == R.id.snoozeLyt){
-            new InputNumberDialog(this, "Snooze Interval", "(minutes)", new InputNumberDialog.Result() {
+            new InputNumberDialog(this, "Snooze Interval", "(minutes)", new Result() {
                 @Override
                 protected void onSubmit(int value) {
                     TextView textView = view.findViewById(R.id.snoozeTxt);
                     textView.setText(value + " min");
-                    settingsValue.put("snooze", value);
+                    settingsValue.snooze = value;
                 }
             });
         }

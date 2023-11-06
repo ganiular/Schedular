@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+<!--    <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />-->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,8 +17,33 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Schedular"
         tools:targetApi="31">
+        <service
+            android:name=".NotificationService"
+            android:foregroundServiceType="mediaPlayback"
+            android:enabled="true"
+            android:exported="false" />
+
         <activity
-            android:name=".AddEventActivity"
+            android:name=".NotificationActivity"
+            android:exported="false">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
+
+        <receiver
+            android:name=".NotificationReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.scheduler.END_SESSION" />
+                <action android:name="com.example.scheduler.REMINDER" />
+                <action android:name="com.example.scheduler.START_SESSION" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".EventSettingsActivity"
             android:exported="false">
             <meta-data
                 android:name="android.app.lib_name"

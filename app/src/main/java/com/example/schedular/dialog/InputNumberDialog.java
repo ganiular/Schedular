@@ -35,12 +35,5 @@ public class InputNumberDialog {
 
         dialog.show();
     }
-
-    public abstract static class Result{
-        protected abstract void onSubmit(int value);
-
-        public void onCancel(AlertDialog dialog) {
-            dialog.dismiss();
-        }
-    }
 }
+

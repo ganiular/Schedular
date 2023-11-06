@@ -12,7 +12,7 @@ import android.widget.TextView;
 import com.example.schedular.R;
 
 public class InputRangeDialog {
-    public InputRangeDialog(Context context, CharSequence title, InputNumberDialog.Result result){
+    public InputRangeDialog(Context context, CharSequence title, Result result){
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_input_range, null, false);
         builder.setView(dialogView);

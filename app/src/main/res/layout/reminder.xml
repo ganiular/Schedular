@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    tools:showIn="@layout/activity_add_event" >
+    tools:showIn="@layout/activity_event_settings" >
 
     <Switch
         android:id="@+id/reminderSwt"
@@ -82,6 +82,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:visibility="gone"
         android:id="@+id/soundLyt"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
