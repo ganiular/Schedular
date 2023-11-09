@@ -6,7 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
-import android.os.SystemClock;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,40 +50,46 @@ public class EventAdapter extends RecyclerView.Adapter<EventAdapter.ViewHolder> 
         dataItems = provider.getAllEvents();
     }
 
-    public void setEventAlarms(Context context){
+    /*public void setEventAlarms(Context context){
         for (EventProvider.EventModel e: dataItems) {
             long time = e.getEventRemainingTime();
             setAlarm(context, e, time);
         }
-    }
+    }*/
 
-    private void setAlarm(Context context, EventProvider.EventModel event, long timeRemaining) {
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-
-        // Create a BroadcastReceiver to handle the notification
-        Intent notificationIntent = new Intent(context, NotificationReceiver.class);
-        if(event.reminder)
-            notificationIntent.setAction(NotificationReceiver.ACTION_REMINDER);
-        else
-            notificationIntent.setAction(NotificationReceiver.ACTION_START_SESSION);
-        notificationIntent.setData(Uri.parse("custom:" + event.id));
-        notificationIntent.putExtra(NotificationReceiver.NOTIFICATION_ID, event.id); // Unique ID for the notification (optional)
-
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, (int) event.id, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
-
-        if (timeRemaining > 0) {
-            // Calculate the alarm time based on the remaining time
-//            long alarmTime = SystemClock.elapsedRealtime() + timeRemaining;
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTimeInMillis(System.currentTimeMillis());
-            calendar.set(Calendar.SECOND, 0);
-            calendar.add(Calendar.MINUTE, (int) timeRemaining);
-
-            // Set the alarm to trigger at the calculated time
-//            alarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, alarmTime, pendingIntent);
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
-        }
-    }
+//    private void setAlarm(Context context, EventProvider.EventModel event, long timeRemaining) {
+//        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+//
+//        // Create a BroadcastReceiver to handle the notification
+//        Intent notificationIntent = new Intent(context, NotificationReceiver.class);
+//        if(event.reminder) {
+//            notificationIntent.setAction(NotificationReceiver.ACTION_REMINDER);
+//            notificationIntent.putExtra(NotificationReceiver.NOTIFICATION_REMINDER_MESSAGE, "Incoming event" + event.title);
+//        }
+//        else
+//            notificationIntent.setAction(NotificationReceiver.ACTION_START_SESSION);
+//        notificationIntent.setData(Uri.parse("custom:" + event.id));
+//        notificationIntent.putExtra(NotificationReceiver.NOTIFICATION_ID, event.id); // Unique ID for the notification (optional)
+//
+//        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, (int) event.id, notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT);
+//
+//        if (timeRemaining > 0) {
+//            // Calculate the alarm time based on the remaining time
+////            long alarmTime = SystemClock.elapsedRealtime() + timeRemaining;
+//            Calendar calendar = Calendar.getInstance();
+//            calendar.setTimeInMillis(System.currentTimeMillis());
+//            calendar.set(Calendar.SECOND, 0);
+//            calendar.add(Calendar.MINUTE, (int) timeRemaining);
+//
+//            // Set the alarm to trigger at the calculated time
+////            alarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP, alarmTime, pendingIntent);
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+//                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+//            }else {
+//                alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+//            }
+//        }
+//    }
 
 
     @NonNull

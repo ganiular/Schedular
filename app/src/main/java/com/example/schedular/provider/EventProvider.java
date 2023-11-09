@@ -122,81 +122,81 @@ public class EventProvider {
         return rowId;
     }
 
-    public void deactivateActivities(Context context, EventModel event) {
-        // Get previous states before change
-        SharedPreferences mPreferences = context.getSharedPreferences(SharedConstant.APP_PACKAGE_NAME, Context.MODE_PRIVATE);
-        long lastEventId = mPreferences.getLong("lastEventId", 0);
-        if(lastEventId == event.id){
-            int ringerMode = mPreferences.getInt("initialRingerMode", 0);
-            int ringingVolume = mPreferences.getInt("initialStreamVolume", 0);
+//    public void deactivateActivities(Context context, EventModel event) {
+//        // Get previous states before change
+//        SharedPreferences mPreferences = context.getSharedPreferences(SharedConstant.APP_PACKAGE_NAME, Context.MODE_PRIVATE);
+//        long lastEventId = mPreferences.getLong("lastEventId", 0);
+//        if(lastEventId == event.id){
+//            int ringerMode = mPreferences.getInt("initialRingerMode", 0);
+//            int ringingVolume = mPreferences.getInt("initialStreamVolume", 0);
+//
+//            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+//            audioManager.setRingerMode(ringerMode);
+//            audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, ringingVolume, 0);
+//        }
+//    }
 
-            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-            audioManager.setRingerMode(ringerMode);
-            audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, ringingVolume, 0);
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    public void activateActivities(Context context, EventModel event){
-        // Keep current states before change
-        SharedPreferences mPreferences = context.getSharedPreferences(SharedConstant.APP_PACKAGE_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor preferencesEditor = mPreferences.edit();
-        preferencesEditor.clear();
-        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-        preferencesEditor.putInt("initialRingerMode", audioManager.getRingerMode());
-        preferencesEditor.putInt("initialStreamVolume", audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION));
-        preferencesEditor.putLong("lastEventId", event.id);
-        preferencesEditor.apply();
-
-        // Return snoozeCount back to default
-        if(event.snoozeCount > 0){
-            ContentValues values = new ContentValues();
-            values.put("snoozeCount", 0);
-            SQLiteDatabase db = dbHelper.getWriter();
-            db.update(TABLE_NAME, values,"id=?", new String[]{""+event.id});
-            db.close();
-        }
-
-        if(event.muteDevice){
-            if(event.enableVibration){
-                audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
-            }else {
-                audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
-            }
-        } else if(event.enableVibration){
-            audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
-        } else if(event.ringingVolume > 0){
-            audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, event.ringingVolume, 0);
-        }
-
-        if(event.offMobileData){
-            TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                try {
-                    telephonyManager.setDataEnabled(false);
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
-            }else{
-                try {
-                    Method setDataEnabled = telephonyManager.getClass().getDeclaredMethod("setDataEnabled", boolean.class);
-                    setDataEnabled.setAccessible(true);
-                    setDataEnabled.invoke(telephonyManager, false);
-                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                    ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-                    try {
-                        Method setDataEnabled = connectivityManager.getClass().getDeclaredMethod("setMobileDataEnabled", boolean.class);
-                        setDataEnabled.setAccessible(true);
-                        setDataEnabled.invoke(connectivityManager, false);
-                    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
-                        ex.printStackTrace();
-                    }
-
-                }
-            }
-        }
-    }
+//    @SuppressLint("MissingPermission")
+//    public void activateActivities(Context context, EventModel event){
+//        // Keep current states before change
+//        SharedPreferences mPreferences = context.getSharedPreferences(SharedConstant.APP_PACKAGE_NAME, Context.MODE_PRIVATE);
+//        SharedPreferences.Editor preferencesEditor = mPreferences.edit();
+//        preferencesEditor.clear();
+//        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+//        preferencesEditor.putInt("initialRingerMode", audioManager.getRingerMode());
+//        preferencesEditor.putInt("initialStreamVolume", audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION));
+//        preferencesEditor.putLong("lastEventId", event.id);
+//        preferencesEditor.apply();
+//
+//        // Return snoozeCount back to default
+//        if(event.snoozeCount > 0){
+//            ContentValues values = new ContentValues();
+//            values.put("snoozeCount", 0);
+//            SQLiteDatabase db = dbHelper.getWriter();
+//            db.update(TABLE_NAME, values,"id=?", new String[]{""+event.id});
+//            db.close();
+//        }
+//
+//        if(event.muteDevice){
+//            if(event.enableVibration){
+//                audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+//            }else {
+//                audioManager.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+//            }
+//        } else if(event.enableVibration){
+//            audioManager.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+//        } else if(event.ringingVolume > 0){
+//            audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, event.ringingVolume, 0);
+//        }
+//
+//        if(event.offMobileData){
+//            TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                try {
+//                    telephonyManager.setDataEnabled(false);
+//                }catch (Exception e){
+//                    e.printStackTrace();
+//                }
+//            }else{
+//                try {
+//                    Method setDataEnabled = telephonyManager.getClass().getDeclaredMethod("setDataEnabled", boolean.class);
+//                    setDataEnabled.setAccessible(true);
+//                    setDataEnabled.invoke(telephonyManager, false);
+//                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+//                    e.printStackTrace();
+//                    ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+//                    try {
+//                        Method setDataEnabled = connectivityManager.getClass().getDeclaredMethod("setMobileDataEnabled", boolean.class);
+//                        setDataEnabled.setAccessible(true);
+//                        setDataEnabled.invoke(connectivityManager, false);
+//                    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
+//                        ex.printStackTrace();
+//                    }
+//
+//                }
+//            }
+//        }
+//    }
 
     public long createEvent(String title, long time, long duration, String[] days, boolean repeat, boolean reminder, long remind, long snooze, String notificationSound, boolean muteDevice, int ringingVolume, boolean enableVibration, boolean offMobileData){
         ContentValues values = new ContentValues();
@@ -223,6 +223,14 @@ public class EventProvider {
         long result = db.update(TABLE_NAME, values, "id=?", new String[]{"" + rowId});
         db.close();
         return result;
+    }
+
+    public void clearSnooze(long eventId) {
+        ContentValues values = new ContentValues();
+        values.put("snoozeCount", 0);
+        SQLiteDatabase db = dbHelper.getWriter();
+        db.update(TABLE_NAME, values,"id=?", new String[]{""+eventId});
+        db.close();
     }
 
 
@@ -326,6 +334,7 @@ public class EventProvider {
             return nextDay + " " + Converter.timeFormatRangeToAM_PM(this.hour, this.minute, this.duration);
         }
 
+        /** Returns 0 for today, 1 for tomorrow, ..., 7 for next week of same day*/
         public int getDayOffset() {
             Calendar calendar = Calendar.getInstance();
             int today = calendar.get(Calendar.DAY_OF_WEEK);
@@ -362,7 +371,8 @@ public class EventProvider {
             return offset;
         }
 
-        private int getDay(){
+        /** Returns next day index, 1 for Monday, 2 for Tuesday, ... */
+        public int getDayIndex(){
             Calendar calendar = Calendar.getInstance();
             int today = calendar.get(Calendar.DAY_OF_WEEK);
             int dayIndex = today - 1;
@@ -372,6 +382,15 @@ public class EventProvider {
                 dayIndex = (dayIndex + 1) % 7;
             }
             return dayIndex + 1;
+        }
+
+        public Calendar getEndTime(){
+            Calendar calendar = Calendar.getInstance();
+            calendar.set(Calendar.DAY_OF_WEEK, getDayIndex());
+            calendar.set(Calendar.HOUR_OF_DAY, hour);
+            calendar.set(Calendar.MINUTE, minute + duration + getSnoozeSum());
+            calendar.set(Calendar.SECOND, 0);
+            return calendar;
         }
 
         /** Get remaining event or snooze time */

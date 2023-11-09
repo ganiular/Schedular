@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
+import com.example.schedular.provider.EventProvider;
 import com.example.schedular.recycleview.EventAdapter;
 
 public class MainActivity extends AppCompatActivity {
@@ -29,19 +30,10 @@ public class MainActivity extends AppCompatActivity {
         eventRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         EventAdapter adapter = new EventAdapter(this);
         adapter.setItemClickListener(this);
-        adapter.setEventAlarms(this);
+        // adapter.setEventAlarms(this);
         eventRecyclerView.setAdapter(adapter);
 
         findViewById(R.id.floatingActionButton).setOnClickListener(this::gotoAddEventActivity);
-
-        // TODO: Remove
-        // NOTE: This just for test for notification
-        findViewById(R.id.floatingActionButton).setOnLongClickListener(view -> {
-            Intent intent = new Intent(NotificationReceiver.ACTION_REMINDER);
-            intent.putExtra(NotificationReceiver.NOTIFICATION_ID, 1L);
-            sendBroadcast(intent);
-            return true;
-        });
     }
 
     private void gotoAddEventActivity(View view) {
@@ -63,8 +55,18 @@ public class MainActivity extends AppCompatActivity {
             case MainActivity.CREATE_EVENT_REQUEST:
             case MainActivity.EDIT_EVENT_REQUEST:
                 if (resultCode == RESULT_OK) {
-                    // reload event list
-                    // reloadData();
+                    assert data != null;
+                    long eventId = data.getLongExtra(EVENT_ID, 0);
+                    if(eventId != 0) {
+                        if(resultCode != CREATE_EVENT_REQUEST) {
+                            NotificationReceiver.cancelAlarm(this, eventId, NotificationReceiver.ACTION_REMINDER);
+                            NotificationReceiver.cancelAlarm(this, eventId, NotificationReceiver.ACTION_START_SESSION);
+                            NotificationReceiver.cancelAlarm(this, eventId, NotificationReceiver.ACTION_END_SESSION);
+                        }
+                        EventProvider provider = new EventProvider(this);
+                        EventProvider.EventModel event = provider.getEvent(eventId);
+                        NotificationReceiver.setAlarm(this, event);
+                    }
                 }
                 break;
         }
@@ -80,6 +82,6 @@ public class MainActivity extends AppCompatActivity {
         EventAdapter adapter = (EventAdapter) eventRecyclerView.getAdapter();
         adapter.fetchDataItems();
         adapter.notifyDataSetChanged();
-        adapter.setEventAlarms(this);
+        // adapter.setEventAlarms(this);
     }
 }
